@@ -10,12 +10,15 @@ use Illuminate\Support\Facades\DB;
 class Comment extends Model
 {
     use HasFactory;
+    public $postId;
+    public $commentId;
 
     public function store($post_id, $commentator, $comment)
     {
-        $commentId = $this->save_record($post_id, $commentator, $comment);
+        $this->postId = $post_id;
+        $this->commentId = $this->save_record($post_id, $commentator, $comment);
 
-        return $this->retrieve($commentId, $post_id);
+        return $this;
     }
 
     public function storeGetId($post_id, $commentator, $comment)
@@ -33,8 +36,12 @@ class Comment extends Model
                             'updated_at' => Carbon::now()
                         ]);
 
-        if ($numberOfRows > 0)
-            return $this->retrieve($comment_id, $post_id);
+        if ($numberOfRows > 0) {
+            $this->postId = $post_id;
+            $this->commentId = $comment_id;
+
+            return $this;
+        }
 
         return false;
     }
@@ -67,12 +74,12 @@ class Comment extends Model
         return $commentId;
     }
 
-    public function retrieve($id, $post_id)
+    public function retrieve()
     {
         return DB::table('comments')
                 ->select('commentator', 'comment', 'created_at')
-                ->where('id', $id)
-                ->where('post_id', $post_id)
+                ->where('id', $this->commentId)
+                ->where('post_id', $this->postId)
                 ->whereNull('deleted_at')
                 ->first();
     }
@@ -87,5 +94,38 @@ class Comment extends Model
         ]);
 
         return $this->retrieve($childId, $post_id);
+    }
+
+    public function retrieve_all_comments($post_id)
+    {
+        $response = DB::table('comments')
+                        ->select('id', 'post_id', 'commentator', 'comment', 'has_parent', 'created_at')
+                        ->where('post_id', $post_id)
+                        ->where('has_parent', false)
+                        ->whereNull('deleted_at')
+                        ->get();
+
+        return $this->get_replies($response);
+    }
+
+    protected function get_replies($comments)
+    {
+        $comments = collect($comments);
+        return $comments->map(function ($comment) {
+            $replies = $this->has_reply($comment->id);
+            $comment->comments = $this->get_replies($replies);
+
+            return $comment;
+        });
+    }
+
+    protected function has_reply($id)
+    {
+        $response = DB::select(
+            "SELECT id, commentator, comment, created_at FROM comments WHERE id IN (SELECT child_comment_id FROM parent_child_comments WHERE parent_comment_id = ? AND deleted_at IS NULL) ORDER BY created_at DESC",
+            [$id]
+        );
+
+        return $response;
     }
 }

@@ -16,9 +16,13 @@ class CommentController extends ResponseController
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index($post_id)
     {
-        return 'hi';
+        $comment = new Comment();
+        $data = $comment->retrieve_all_comments($post_id);
+
+        // return response
+        return $this->sendResponse($data, 'Comments retrieved successful');
     }
 
     /**
@@ -49,7 +53,7 @@ class CommentController extends ResponseController
         // check duplicate comment if need be
 
         // create the comment record
-        $data = (new Comment)->store($post_id, $request->name, $request->comment);
+        $data = (new Comment)->store($post_id, $request->name, $request->comment)->retrieve();
 
         // return response
         return $this->sendResponse($data, 'Comment was successful', Response::HTTP_CREATED);
@@ -110,7 +114,7 @@ class CommentController extends ResponseController
             return $this->sendError('Validation error', $validator->errors()->all(), Response::HTTP_BAD_REQUEST);
 
         $comment = new Comment();
-        $data = $comment->update_record($id, $post_id, $request->name, $request->comment);
+        $data = $comment->update_record($id, $post_id, $request->name, $request->comment)->retrieve();
 
         if (!$data)
             return $this->sendError('Request failed', 'Update could not be completed', Response::HTTP_BAD_REQUEST);

@@ -16,7 +16,7 @@ class CommentReplyController extends ResponseController
      */
     public function index()
     {
-        //
+        echo 'okay';
     }
 
     /**
@@ -65,20 +65,26 @@ class CommentReplyController extends ResponseController
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show($post_id, $comment_id, $reply_id)
     {
-        //
-    }
+        //request for all post values
+        $input = [
+            'comment_id' => $reply_id
+        ];
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
+        //Validate to ensure valid inputs
+        $validator = Validator::make($input, [
+            'comment_id' => 'required|exists:comments,id'
+        ]);
+
+        //handle validation error
+        if ($validator->fails())
+            return $this->sendError('Validation error', $validator->errors()->all(), Response::HTTP_BAD_REQUEST);
+
+        $data = (new Comment)->retrieve($reply_id, $post_id);
+
+        // return response
+        return $this->sendResponse($data, 'Comment retrieved successful');
     }
 
     /**
@@ -88,9 +94,33 @@ class CommentReplyController extends ResponseController
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $post_id, $comment_id, $id)
     {
-        //
+        //request for all post values
+        $input = [
+            ...$request->all(),
+            ...['comment_id' => $id]
+        ];
+
+        //Validate to ensure valid inputs
+        $validator = Validator::make($input, [
+            'comment_id' => 'required|exists:comments,id',
+            'name' => 'required',
+            'comment' => 'required'
+        ]);
+
+        //handle validation error
+        if ($validator->fails())
+            return $this->sendError('Validation error', $validator->errors()->all(), Response::HTTP_BAD_REQUEST);
+
+        $comment = new Comment();
+        $data = $comment->update_record($id, $post_id, $request->name, $request->comment);
+
+        if (!$data)
+            return $this->sendError('Request failed', 'Update could not be completed', Response::HTTP_BAD_REQUEST);
+
+        // return response
+        return $this->sendResponse($data, 'Comment updated successful');
     }
 
     /**
@@ -99,8 +129,25 @@ class CommentReplyController extends ResponseController
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy($post_id, $comment_id, $id)
     {
-        //
+        //request for all post values
+        $input = [
+            'comment_id' => $id
+        ];
+
+        //Validate to ensure valid inputs
+        $validator = Validator::make($input, [
+            'comment_id' => 'required|exists:comments,id'
+        ]);
+
+        //handle validation error
+        if ($validator->fails())
+            return $this->sendError('Validation error', $validator->errors()->all(), Response::HTTP_BAD_REQUEST);
+
+        (new Comment)->delete_record($id, $post_id);
+
+        // return response
+        return $this->sendResponse('', 'Comment deleted successful');
     }
 }
