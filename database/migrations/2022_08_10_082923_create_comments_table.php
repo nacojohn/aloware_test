@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('post_id');
             $table->string('commentator');
             $table->text('comment');
+            $table->boolean('has_parent')->default(false);
             $table->softDeletes();
             $table->timestamps();
         });
