@@ -21,9 +21,33 @@ class Comment extends Model
         return $this;
     }
 
-    public function storeGetId($post_id, $commentator, $comment)
+    protected function save_record($post_id, $commentator, $comment, $has_parent = false)
     {
-        return $this->save_record($post_id, $commentator, $comment);
+        $commentId = DB::table('comments')->insertGetId([
+            'post_id' => $post_id,
+            'commentator' => ucfirst($commentator),
+            'comment' => ucfirst($comment),
+            'has_parent' => $has_parent,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now()
+        ]);
+
+        return $commentId;
+    }
+
+    public function store_reply($post_id, $comment_id, $commentator, $comment)
+    {
+        $this->postId = $post_id;
+        $this->commentId  = $this->save_record($post_id, $commentator, $comment, true);
+
+        DB::table('parent_child_comments')->insert([
+            'parent_comment_id' => $comment_id,
+            'child_comment_id' => $this->commentId,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now()
+        ]);
+
+        return $this;
     }
 
     public function update_record($comment_id, $post_id, $commentator, $comment)
@@ -61,19 +85,6 @@ class Comment extends Model
         return false;
     }
 
-    protected function save_record($post_id, $commentator, $comment)
-    {
-        $commentId = DB::table('comments')->insertGetId([
-            'post_id' => $post_id,
-            'commentator' => ucfirst($commentator),
-            'comment' => ucfirst($comment),
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now()
-        ]);
-
-        return $commentId;
-    }
-
     public function retrieve()
     {
         return DB::table('comments')
@@ -82,18 +93,6 @@ class Comment extends Model
                 ->where('post_id', $this->postId)
                 ->whereNull('deleted_at')
                 ->first();
-    }
-
-    public function store_child($parentId, $childId, $post_id)
-    {
-        DB::table('parent_child_comments')->insert([
-            'parent_comment_id' => $parentId,
-            'child_comment_id' => $childId,
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now()
-        ]);
-
-        return $this->retrieve($childId, $post_id);
     }
 
     public function retrieve_all_comments($post_id)

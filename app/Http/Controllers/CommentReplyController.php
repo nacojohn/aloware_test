@@ -16,7 +16,7 @@ class CommentReplyController extends ResponseController
      */
     public function index()
     {
-        echo 'okay';
+        echo 'return the comment reply';
     }
 
     /**
@@ -52,8 +52,7 @@ class CommentReplyController extends ResponseController
 
         // create the comment record
         $comment = new Comment();
-        $id = $comment->storeGetId($post_id, $request->name, $request->comment);
-        $data = $comment->store_child($comment_id, $id, $post_id);
+        $data = $comment->store_reply($post_id, $comment_id, $request->name, $request->comment)->retrieve();
 
         // return response
         return $this->sendResponse($data, 'Comment was successful', Response::HTTP_CREATED);
@@ -114,7 +113,7 @@ class CommentReplyController extends ResponseController
             return $this->sendError('Validation error', $validator->errors()->all(), Response::HTTP_BAD_REQUEST);
 
         $comment = new Comment();
-        $data = $comment->update_record($id, $post_id, $request->name, $request->comment);
+        $data = $comment->update_record($id, $post_id, $request->name, $request->comment)->retrieve();
 
         if (!$data)
             return $this->sendError('Request failed', 'Update could not be completed', Response::HTTP_BAD_REQUEST);
